@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { Redis } from '@upstash/redis';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,21 +33,55 @@ export const DEFAULT_WELCOME_MESSAGE: StatusMessage = {
   isWelcome: true,
 };
 
+// Khởi tạo Redis client nếu có cấu hình trên Vercel hoặc biến môi trường
+function getRedisClient(): Redis | null {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (url && token) {
+    return new Redis({ url, token });
+  }
+  return null;
+}
+
+// In-memory store dự phòng để tránh crash EROFS trên Vercel Serverless
+let memoryStore: StatusData = {
+  isUnlocked: false,
+  lockedMessage: 'Tính năng này sẽ được sử dụng vào ngày tốt nghiệp',
+  messages: [],
+};
+
 async function getStatusData(): Promise<StatusData> {
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      const data = await redis.get<StatusData | string>('graduation_status');
+      if (data) {
+        const parsed: StatusData = typeof data === 'string' ? JSON.parse(data) : data;
+        return {
+          isUnlocked: Boolean(parsed.isUnlocked),
+          lockedMessage: parsed.lockedMessage || 'Tính năng này sẽ được sử dụng vào ngày tốt nghiệp',
+          messages: Array.isArray(parsed.messages)
+            ? parsed.messages.filter((m: any) => m.id !== 1 && !m.isWelcome)
+            : [],
+        };
+      }
+    } catch (redisErr) {
+      console.error('Lỗi đọc Upstash Redis:', redisErr);
+    }
+  }
+
+  // Thử đọc từ local file (khi chạy ở máy local)
   try {
     const content = await fs.readFile(DATA_FILE, 'utf-8');
     const parsed = JSON.parse(content);
     
-    // Xử lý dữ liệu dạng mảng cũ (legacy)
     if (Array.isArray(parsed)) {
       const hostMessages = parsed.filter((m: any) => m.id !== 1 && !m.isWelcome);
-      const migrated: StatusData = {
+      return {
         isUnlocked: false,
         lockedMessage: 'Tính năng này sẽ được sử dụng vào ngày tốt nghiệp',
         messages: hostMessages,
       };
-      await fs.writeFile(DATA_FILE, JSON.stringify(migrated, null, 2), 'utf-8');
-      return migrated;
     }
 
     return {
@@ -56,19 +91,31 @@ async function getStatusData(): Promise<StatusData> {
         ? parsed.messages.filter((m: any) => m.id !== 1 && !m.isWelcome)
         : [],
     };
-  } catch (err: any) {
-    const initial: StatusData = {
-      isUnlocked: false,
-      lockedMessage: 'Tính năng này sẽ được sử dụng vào ngày tốt nghiệp',
-      messages: [],
-    };
-    await fs.writeFile(DATA_FILE, JSON.stringify(initial, null, 2), 'utf-8');
-    return initial;
+  } catch {
+    // Trên Vercel hoặc nếu không đọc được file, dùng memoryStore
+    return memoryStore;
   }
 }
 
 async function saveStatusData(data: StatusData): Promise<void> {
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  memoryStore = data;
+
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      await redis.set('graduation_status', data);
+      return;
+    } catch (redisErr) {
+      console.error('Lỗi lưu Upstash Redis:', redisErr);
+    }
+  }
+
+  // Fallback lưu file cục bộ (chỉ ghi được ở môi trường local)
+  try {
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch {
+    // Trên Vercel file system là Read-Only (EROFS), bỏ qua không throw lỗi 500
+  }
 }
 
 // GET: Lấy trạng thái khóa, tin nhắn (kèm tin chào mừng mặc định) và GPS mới nhất
@@ -88,6 +135,7 @@ export async function GET() {
       messages: allMessages,
       hostMessages: data.messages,
       latestGps,
+      storage: getRedisClient() ? 'upstash-redis' : 'fallback-memory',
     });
   } catch (err: any) {
     return NextResponse.json(
@@ -122,6 +170,7 @@ export async function POST(request: Request) {
         messages: allMessages,
         hostMessages: data.messages,
         latestGps,
+        storage: getRedisClient() ? 'upstash-redis' : 'fallback-memory',
       });
     }
 
@@ -163,6 +212,7 @@ export async function POST(request: Request) {
       messages: allMessages,
       hostMessages: data.messages,
       latestGps,
+      storage: getRedisClient() ? 'upstash-redis' : 'fallback-memory',
     });
   } catch (err: any) {
     return NextResponse.json(
@@ -202,12 +252,12 @@ export async function DELETE(request: Request) {
         messages: [DEFAULT_WELCOME_MESSAGE],
         hostMessages: [],
         latestGps: null,
+        storage: getRedisClient() ? 'upstash-redis' : 'fallback-memory',
       });
     }
 
     if (idParam) {
       const targetId = String(idParam);
-      // Lọc bỏ tin có ID tương ứng (tin chào mừng id: 1 luôn được giữ)
       data.messages = data.messages.filter((m) => String(m.id) !== targetId);
       await saveStatusData(data);
 
@@ -221,6 +271,7 @@ export async function DELETE(request: Request) {
         messages: allMessages,
         hostMessages: data.messages,
         latestGps,
+        storage: getRedisClient() ? 'upstash-redis' : 'fallback-memory',
       });
     }
 

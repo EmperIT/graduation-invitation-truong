@@ -4,7 +4,6 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
-// Thư mục lưu trữ ảnh tĩnh nội bộ (fallback nếu cloud ngoài timeout)
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 export async function POST(request: Request) {
@@ -20,47 +19,72 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-
-    // 1. Thử upload lên Cloud Image Storage miễn phí (Freeimage.host API)
-    try {
-      const cloudFormData = new FormData();
-      cloudFormData.append('key', '6d207e02198a847e5294950b50ce7b8b'); // Free development API key
-      cloudFormData.append('action', 'upload');
-      cloudFormData.append('source', buffer.toString('base64'));
-      cloudFormData.append('format', 'json');
-
-      const cloudRes = await fetch('https://freeimage.host/api/1/upload', {
-        method: 'POST',
-        body: cloudFormData,
-        signal: AbortSignal.timeout(6000), // Timeout 6s nếu mạng yếu
-      });
-
-      if (cloudRes.ok) {
-        const cloudData = await cloudRes.json();
-        if (cloudData.status_code === 200 && cloudData.image?.url) {
-          return NextResponse.json({
-            success: true,
-            imageUrl: cloudData.image.url,
-            storage: 'cloud',
-          });
-        }
-      }
-    } catch {
-      // Nếu cloud ngoài lỗi hoặc timeout (do mạng chập chờn), tự động chuyển sang lưu trữ cục bộ
-    }
-
-    // 2. Fallback: Lưu trực tiếp vào public/uploads trên server
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    const mimeType = file.type || 'image/jpeg';
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const fileName = `img_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    const filePath = path.join(UPLOAD_DIR, fileName);
 
-    await fs.writeFile(filePath, buffer);
+    // 1. Nếu có cấu hình Vercel Blob (Token BLOB_READ_WRITE_TOKEN trong Vercel Storage)
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const { put } = await import('@vercel/blob');
+        const blob = await put(fileName, file, { access: 'public' });
+        return NextResponse.json({
+          success: true,
+          imageUrl: blob.url,
+          storage: 'vercel-blob',
+        });
+      } catch (blobErr) {
+        console.error('Lỗi upload Vercel Blob:', blobErr);
+      }
+    }
+
+    // 2. Nếu có cấu hình ImgBB API Key
+    if (process.env.IMGBB_API_KEY) {
+      try {
+        const imgbbForm = new FormData();
+        imgbbForm.append('image', buffer.toString('base64'));
+        const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`, {
+          method: 'POST',
+          body: imgbbForm,
+        });
+        if (imgbbRes.ok) {
+          const imgbbData = await imgbbRes.json();
+          if (imgbbData?.data?.url) {
+            return NextResponse.json({
+              success: true,
+              imageUrl: imgbbData.data.url,
+              storage: 'imgbb',
+            });
+          }
+        }
+      } catch (imgbbErr) {
+        console.error('Lỗi upload ImgBB:', imgbbErr);
+      }
+    }
+
+    // 3. Môi trường local (cho phép ghi file vào thư mục public/uploads)
+    try {
+      await fs.mkdir(UPLOAD_DIR, { recursive: true });
+      const filePath = path.join(UPLOAD_DIR, fileName);
+      await fs.writeFile(filePath, buffer);
+      return NextResponse.json({
+        success: true,
+        imageUrl: `/uploads/${fileName}`,
+        storage: 'local',
+      });
+    } catch {
+      // Trên Vercel serverless là Read-Only (EROFS), tự động chuyển sang Data URL
+    }
+
+    // 4. Fallback tự động trên Vercel khi chưa gắn cloud storage: Trả về Base64 Data URL trực tiếp
+    // Ảnh đã được nén ở client xuống ~100-200KB nên Data URL hoàn toàn hiển thị mượt mà trên mọi thiết bị
+    const base64Data = buffer.toString('base64');
+    const dataUrl = `data:${mimeType};base64,${base64Data}`;
 
     return NextResponse.json({
       success: true,
-      imageUrl: `/uploads/${fileName}`,
-      storage: 'local',
+      imageUrl: dataUrl,
+      storage: 'data-url',
     });
   } catch (err: any) {
     return NextResponse.json(
