@@ -128,6 +128,15 @@ function LockIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+function ParkingIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <path d="M9 17V7h4.5a3 3 0 0 1 0 6H9" />
+    </svg>
+  );
+}
+
 // ---------- BRIGHT & CHEERFUL GRADUATION MASCOT ROBOT ----------
 
 function RobotSVG({ mouthOpen }: { mouthOpen: boolean }) {
@@ -370,7 +379,7 @@ function RobotSVG({ mouthOpen }: { mouthOpen: boolean }) {
 
 // ---------- ARC TRACK (decorative curved line connecting buttons) ----------
 
-function ArcTrack({ radius }: { radius: number }) {
+function ArcTrack({ radius, count = 4 }: { radius: number; count?: number }) {
   // Angle range: extends slightly past 180° and 90° (from 195° down to 75°)
   // so the arc cradles all buttons gracefully
   const extStart = 195;
@@ -385,6 +394,12 @@ function ArcTrack({ radius }: { radius: number }) {
   const padding = 20;
   const size = (radius + padding) * 2;
   const half = radius + padding;
+
+  const startAngle = 180;
+  const endAngle = 90;
+  const angles = Array.from({ length: count }, (_, i) =>
+    count > 1 ? startAngle - i * ((startAngle - endAngle) / (count - 1)) : startAngle
+  );
 
   return (
     <motion.svg
@@ -434,7 +449,7 @@ function ArcTrack({ radius }: { radius: number }) {
       />
 
       {/* Golden anchor dots sitting right at the center of each button position */}
-      {[180, 135, 90].map((angle, i) => {
+      {angles.map((angle, i) => {
         const rad = (angle * Math.PI) / 180;
         const x = Math.cos(rad) * radius;
         const y = -Math.sin(rad) * radius;
@@ -450,7 +465,7 @@ function ArcTrack({ radius }: { radius: number }) {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
-            transition={{ delay: 0.12 + i * 0.08, duration: 0.25 }}
+            transition={{ delay: 0.12 + i * 0.06, duration: 0.25 }}
           />
         );
       })}
@@ -545,7 +560,13 @@ function renderMessageText(text: string) {
   });
 }
 
-function LiveLocationPopup({ onClose }: { onClose: () => void }) {
+function LiveLocationPopup({
+  onClose,
+  onOpenParking,
+}: {
+  onClose: () => void;
+  onOpenParking?: () => void;
+}) {
   const [messages, setMessages] = useState<StatusMessage[]>([]);
   const [hostGps, setHostGps] = useState<GpsLocation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1140,12 +1161,25 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* ── MAP HEADER (Chọn bản đồ không giới hạn) ── */}
-          <div className="px-4 py-1.5 bg-black/30 border-t border-white/5 flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-[#f5deb3] flex items-center gap-1.5">
-              <MapOutlineIcon className="w-3.5 h-3.5 text-[#c9a96e]" />
-              <span>Bản đồ thời gian thực</span>
-              {hostGps && <span className="text-[10px] text-emerald-400 font-normal">(Vị trí Host)</span>}
-            </span>
+          <div className="px-4 py-1.5 bg-black/30 border-t border-white/5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-semibold text-[#f5deb3] flex items-center gap-1.5">
+                <MapOutlineIcon className="w-3.5 h-3.5 text-[#c9a96e]" />
+                <span>Bản đồ thời gian thực</span>
+                {hostGps && <span className="text-[10px] text-emerald-400 font-normal">(Vị trí Host)</span>}
+              </span>
+              {onOpenParking && (
+                <button
+                  type="button"
+                  onClick={onOpenParking}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-semibold active:scale-95 transition-all"
+                  title="Mở sơ đồ gửi xe TDTU"
+                >
+                  <ParkingIcon className="w-2.5 h-2.5" />
+                  <span>Sơ đồ gửi xe</span>
+                </button>
+              )}
+            </div>
 
             {/* Map Switcher: OpenStreetMap (Unlimited) vs Google Maps */}
             <div className="flex items-center rounded-lg bg-white/5 p-0.5 border border-white/10 text-[10px]">            
@@ -1294,6 +1328,224 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ---------- PARKING MODAL (HƯỚNG DẪN & SƠ ĐỒ GỬI XE TDTU) ----------
+
+function ParkingModal({ onClose }: { onClose: () => void }) {
+  const [isZoomed, setIsZoomed] = useState(false);
+  const dragControls = useDragControls();
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+        onClick={onClose}
+      >
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+        <motion.div
+          drag="y"
+          dragListener={false}
+          dragControls={dragControls}
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0.05, bottom: 0.7 }}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 75 || info.velocity.y > 350) {
+              onClose();
+            }
+          }}
+          initial={{ scale: 0.92, opacity: 0, y: 40 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: "100%", transition: { duration: 0.25 } }}
+          transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
+          className="relative z-10 w-full max-w-[490px] sm:rounded-2xl rounded-t-2xl overflow-hidden flex flex-col"
+          style={{
+            maxHeight: "min(92vh, 740px)",
+            background: "linear-gradient(160deg, #1e1914 0%, #2a2118 40%, #1a1612 100%)",
+            boxShadow: "0 -8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(201,169,110,0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Mobile Drag-to-dismiss Handle Bar */}
+          <div
+            className="w-full pt-3 pb-1 flex justify-center items-center sm:hidden cursor-grab active:cursor-grabbing touch-none select-none"
+            onPointerDown={(e) => dragControls.start(e)}
+          >
+            <div className="w-12 h-1.5 rounded-full bg-white/30 hover:bg-white/50 active:bg-[#c9a96e] transition-colors" />
+          </div>
+
+          {/* ── HEADER ── */}
+          <div
+            onPointerDown={(e) => {
+              if ((e.target as HTMLElement).closest("button, a")) return;
+              dragControls.start(e);
+            }}
+            className="px-4 pt-1 sm:pt-4 pb-3 shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{
+                  background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+                  boxShadow: "0 3px 10px rgba(245,158,11,0.35)",
+                }}
+              >
+                <ParkingIcon className="w-5 h-5 text-[#14100c]" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h3 className="text-[15px] font-bold text-white/95 leading-tight">
+                  Sơ đồ & Vị trí gửi xe
+                </h3>
+                <p className="text-[11px] text-[#f5deb3]/85 font-medium mt-0.5">
+                  Trường Đại học Tôn Đức Thắng (TDTU)
+                </p>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-white/8 hover:bg-white/15 flex items-center justify-center text-white/50 hover:text-white/80 transition-all duration-200"
+                aria-label="Đóng"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="h-px bg-gradient-to-r from-transparent via-[#c9a96e]/25 to-transparent mx-3" />
+
+          {/* ── SCROLLABLE BODY ── */}
+          <div
+            className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+            style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(201,169,110,0.3) transparent" }}
+          >
+            {/* Chú giải nhanh phân luồng gửi xe */}
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-start gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0 mt-0.5 shadow-sm" />
+                <div>
+                  <span className="font-bold text-blue-300 block">Xe Ô tô</span>
+                  <span className="text-white/70 text-[10px] leading-tight">
+                    Đi theo hướng cam vào bãi đỗ xe ô tô
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-neutral-900 border border-amber-400 shrink-0 mt-0.5 shadow-sm" />
+                <div>
+                  <span className="font-bold text-amber-300 block">Xe Máy</span>
+                  <span className="text-white/70 text-[10px] leading-tight">
+                    Vào Cổng 9 hoặc cổng CSND tới nhà xe máy
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Khung hiển thị ảnh sơ đồ */}
+            <div className="relative rounded-xl overflow-hidden border border-[#c9a96e]/35 bg-white shadow-lg group">
+              <img
+                src="/park.png"
+                alt="Sơ đồ gửi xe Trường Đại học Tôn Đức Thắng"
+                className="w-full h-auto object-contain cursor-zoom-in transition-transform duration-200 group-hover:scale-[1.01]"
+                onClick={() => setIsZoomed(true)}
+              />
+
+              {/* Nút bấm phóng to nổi góc trên ảnh */}
+              <button
+                type="button"
+                onClick={() => setIsZoomed(true)}
+                className="absolute bottom-2.5 right-2.5 px-2.5 py-1.5 rounded-lg bg-black/80 hover:bg-black text-[#f5deb3] text-[11px] font-semibold backdrop-blur-md border border-[#c9a96e]/40 flex items-center gap-1.5 shadow-lg active:scale-95 transition-all"
+              >
+                <SearchZoomIcon className="w-3.5 h-3.5" />
+                <span>Xem phóng to</span>
+              </button>
+            </div>
+
+            {/* Lưu ý & hướng dẫn di chuyển */}
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11.5px] space-y-1.5 text-white/80">
+              <div className="flex items-center gap-1.5 font-bold text-[#f5deb3]">
+                <PinIcon className="w-3.5 h-3.5 text-[#c9a96e]" />
+                <span>Hướng dẫn di chuyển & Lối vào:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-white/70 text-[11px] leading-relaxed">
+                <li><strong className="text-white">Lối vào Cổng 7:</strong> Hướng vào bãi đỗ xe chính theo điều phối của bảo vệ.</li>
+                <li><strong className="text-white">Lối vào Cổng 9:</strong> Nằm ở phía đường bờ sông, lối vào phụ và thông thoáng nhất cho khách đi xe máy & ô tô.</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* ── FOOTER ── */}
+          <div className="p-3 bg-black/35 border-t border-white/10 shrink-0 flex items-center gap-2">
+            <button
+              onClick={() => setIsZoomed(true)}
+              className="flex-1 py-2 rounded-xl bg-gradient-to-r from-[#c9a96e] to-[#a07a42] hover:brightness-110 active:scale-[0.98] text-[#14100c] text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5"
+            >
+              <SearchZoomIcon className="w-3.5 h-3.5" />
+              <span>Phóng to toàn màn hình</span>
+            </button>
+
+            <a
+              href="/park.png"
+              download="So_do_gui_xe_TDTU.png"
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 active:scale-[0.98] text-[#f5deb3] text-xs font-semibold border border-white/15 transition-all flex items-center justify-center gap-1.5"
+              title="Tải ảnh sơ đồ về máy"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Tải ảnh</span>
+            </a>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Lightbox Modal phóng to ảnh sơ đồ đỗ xe */}
+      <AnimatePresence>
+        {isZoomed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[10001] bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 cursor-pointer"
+            onClick={() => setIsZoomed(false)}
+          >
+            <motion.div
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.2, bottom: 0.7 }}
+              onDragEnd={(_, info) => {
+                if (Math.abs(info.offset.y) > 70 || Math.abs(info.velocity.y) > 300) {
+                  setIsZoomed(false);
+                }
+              }}
+              className="relative max-w-full max-h-full cursor-grab active:cursor-grabbing"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src="/park.png"
+                alt="Sơ đồ gửi xe phóng to"
+                className="max-h-[90vh] max-w-[96vw] object-contain rounded-xl shadow-2xl border border-white/20 select-none bg-white"
+              />
+              <button
+                onClick={() => setIsZoomed(false)}
+                className="absolute top-2 right-2 w-9 h-9 rounded-full bg-black/80 hover:bg-black text-white text-base flex items-center justify-center border border-white/25 transition-colors shadow-lg"
+                title="Đóng ảnh"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 // ---------- MAIN FAB COMPONENT ----------
 
 interface FloatingActionButtonProps {
@@ -1309,6 +1561,7 @@ export default function FloatingActionButton({
 }: FloatingActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showParkingModal, setShowParkingModal] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [lockedMessage, setLockedMessage] = useState(
     "Tính năng này sẽ được sử dụng vào ngày tốt nghiệp"
@@ -1372,6 +1625,19 @@ export default function FloatingActionButton({
       glowColor: "rgba(66, 133, 244, 0.4)",
     },
     {
+      id: "parking",
+      label: "Sơ đồ gửi xe",
+      desc: "Xem vị trí & sơ đồ bãi đỗ xe máy / ô tô",
+      icon: <ParkingIcon />,
+      onClick: () => {
+        setShowParkingModal(true);
+        setIsOpen(false);
+      },
+      color: "#F59E0B",
+      darkColor: "#D97706",
+      glowColor: "rgba(245, 158, 11, 0.4)",
+    },
+    {
       id: "phone",
       label: "Gọi điện thoại",
       desc: "Gọi điện thoại trực tiếp cho Host",
@@ -1425,11 +1691,11 @@ export default function FloatingActionButton({
     },
   ];
 
-  // Radius from center of robot to center of action buttons: 68px
-  const arcRadius = 68;
+  // Radius from center of robot to center of action buttons: 80px (for 4 buttons without overlap)
+  const arcRadius = 80;
   const startAngle = 180; // Map: left (180°)
   const endAngle = 90;    // Location: top (90°)
-  const angleStep = (startAngle - endAngle) / (actions.length - 1); // 45° step
+  const angleStep = (startAngle - endAngle) / (actions.length - 1); // 30° step
 
   return (
     <>
@@ -1524,7 +1790,7 @@ export default function FloatingActionButton({
           <div className="absolute left-1/2 top-1/2 w-0 h-0 pointer-events-none">
             {/* Decorative Arc Track — runs along the exact same radius and center */}
             <AnimatePresence>
-              {isOpen && <ArcTrack radius={arcRadius} />}
+              {isOpen && <ArcTrack radius={arcRadius} count={actions.length} />}
             </AnimatePresence>
 
             {/* Action buttons along the arc — centers align 100% with the arc line */}
@@ -1613,7 +1879,7 @@ export default function FloatingActionButton({
                       Cần hỗ trợ? Bấm tui nhé!
                     </span>
                     <span className="text-[9.5px] text-white/55 leading-tight mt-0.5">
-                      Bản đồ • Vị trí Host • Liên hệ
+                      Sơ đồ • Gửi xe • Vị trí Host • Liên hệ
                     </span>
                   </div>
 
@@ -1757,7 +2023,20 @@ export default function FloatingActionButton({
       {/* Live location modal */}
       <AnimatePresence>
         {showLocationModal && (
-          <LiveLocationPopup onClose={() => setShowLocationModal(false)} />
+          <LiveLocationPopup
+            onClose={() => setShowLocationModal(false)}
+            onOpenParking={() => {
+              setShowLocationModal(false);
+              setShowParkingModal(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Parking map modal */}
+      <AnimatePresence>
+        {showParkingModal && (
+          <ParkingModal onClose={() => setShowParkingModal(false)} />
         )}
       </AnimatePresence>
     </>
