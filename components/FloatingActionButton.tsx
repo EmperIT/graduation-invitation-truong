@@ -1303,7 +1303,7 @@ interface FloatingActionButtonProps {
 }
 
 export default function FloatingActionButton({
-  phoneNumber = "0123456789",
+  phoneNumber = "0334053171",
   mapUrl = "",
   liveLocationUrl = "",
 }: FloatingActionButtonProps) {

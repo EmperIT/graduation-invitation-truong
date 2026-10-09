@@ -8,7 +8,7 @@ export default function PageWithIntro({ dearName }: { dearName?: string }) {
         <div className="relative min-h-[100dvh] overflow-hidden w-full">
             <NewInvitationLayout dearName={dearName} />
             <FloatingActionButton
-                phoneNumber="0123456789"
+                phoneNumber="0334053171"
                 mapUrl=""
                 liveLocationUrl=""
             />
