@@ -1168,17 +1168,6 @@ function LiveLocationPopup({
                 <span>Bản đồ thời gian thực</span>
                 {hostGps && <span className="text-[10px] text-emerald-400 font-normal">(Vị trí Host)</span>}
               </span>
-              {onOpenParking && (
-                <button
-                  type="button"
-                  onClick={onOpenParking}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-semibold active:scale-95 transition-all"
-                  title="Mở sơ đồ gửi xe TDTU"
-                >
-                  <ParkingIcon className="w-2.5 h-2.5" />
-                  <span>Sơ đồ gửi xe</span>
-                </button>
-              )}
             </div>
 
             {/* Map Switcher: OpenStreetMap (Unlimited) vs Google Maps */}
