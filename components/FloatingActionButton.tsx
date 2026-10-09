@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
 
 // ---------- SVG ICONS ----------
 
@@ -557,6 +557,21 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
   const [distanceText, setDistanceText] = useState<string | null>(null);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dragControls = useDragControls();
+  const touchStartY = useRef(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaY = touchEndY - touchStartY.current;
+    const container = e.currentTarget;
+    if (container.scrollTop <= 2 && deltaY > 75) {
+      onClose();
+    }
+  };
 
   // Network State
   const [isOnline, setIsOnline] = useState<boolean>(() =>
@@ -679,13 +694,137 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
   // Determine target coordinates for map (host GPS if available, else TDTU)
   const targetCoords = hostGps || TDTU_COORDS;
 
-  // OpenStreetMap embed URL (no time limits, open-source)
-  const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${(targetCoords.longitude - 0.0035).toFixed(5)}%2C${(targetCoords.latitude - 0.002).toFixed(5)}%2C${(targetCoords.longitude + 0.0035).toFixed(5)}%2C${(targetCoords.latitude + 0.002).toFixed(5)}&layer=mapnik&marker=${targetCoords.latitude.toFixed(5)}%2C${targetCoords.longitude.toFixed(5)}`;
+  // Interactive HTML map với Leaflet hỗ trợ đầy đủ Zoom (lăn chuột/cảm ứng) và Drag/Pan 360 độ mượt mà
+  // Cả Google Maps và OpenStreetMap đều tương tác tự do, không bị khóa như iframe embed mặc định của Google
+  const interactiveMapHtml = useMemo(() => {
+    const lat = targetCoords.latitude;
+    const lng = targetCoords.longitude;
+    const isHost = Boolean(hostGps);
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #map { width: 100%; height: 100%; background: #1a1612; overflow: hidden; }
+    .leaflet-control-zoom { border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important; margin: 8px !important; }
+    .leaflet-control-zoom a {
+      background: rgba(26, 22, 18, 0.92) !important;
+      color: #f5deb3 !important;
+      border: 1px solid rgba(201, 169, 110, 0.35) !important;
+      font-size: 16px !important;
+      width: 28px !important;
+      height: 28px !important;
+      line-height: 26px !important;
+      border-radius: 6px !important;
+      margin-bottom: 3px !important;
+      transition: all 0.2s ease;
+    }
+    .leaflet-control-zoom a:hover {
+      background: #c9a96e !important;
+      color: #14100c !important;
+    }
+    .leaflet-control-attribution {
+      background: rgba(0,0,0,0.65) !important;
+      color: #bbb !important;
+      font-size: 9px !important;
+      padding: 1px 5px !important;
+    }
+    .leaflet-control-attribution a { color: #f5deb3 !important; text-decoration: none; }
+    .pulse-marker {
+      position: relative;
+      width: 24px;
+      height: 24px;
+    }
+    .pulse-marker .dot {
+      width: 14px;
+      height: 14px;
+      background: #EA4335;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .pulse-marker .ring {
+      width: 24px;
+      height: 24px;
+      background: rgba(234, 67, 53, 0.45);
+      border-radius: 50%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      animation: pulse 1.8s infinite ease-out;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    .leaflet-popup-content-wrapper {
+      background: #1e1914 !important;
+      color: #fff !important;
+      border: 1px solid rgba(201, 169, 110, 0.4);
+      border-radius: 8px !important;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important;
+    }
+    .leaflet-popup-content {
+      margin: 8px 12px !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .leaflet-popup-tip { background: #1e1914 !important; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const map = L.map('map', {
+      center: [${lat}, ${lng}],
+      zoom: 17,
+      zoomControl: true,
+      scrollWheelZoom: true,
+      dragging: true,
+      touchZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true
+    });
 
-  // Google Maps embed URL
-  const googleMapsUrl = `https://maps.google.com/maps?q=${targetCoords.latitude},${targetCoords.longitude}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
+    if ('${mapType}' === 'google') {
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: '0123',
+        attribution: '&copy; Google Maps'
+      }).addTo(map);
+    } else {
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+    }
 
-  const activeMapUrl = mapType === "osm" ? osmEmbedUrl : googleMapsUrl;
+    const customIcon = L.divIcon({
+      className: 'pulse-icon',
+      html: '<div class="pulse-marker"><div class="ring"></div><div class="dot"></div></div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -12]
+    });
+
+    const marker = L.marker([${lat}, ${lng}], { icon: customIcon }).addTo(map);
+    marker.bindPopup(${
+      isHost
+        ? `'<strong style="color:#c9a96e">📍 Vị trí Host (Trực tiếp)</strong><br><span style="color:#ddd;font-size:10.5px">Toạ độ: ${lat.toFixed(5)}, ${lng.toFixed(5)}</span>'`
+        : `'<strong style="color:#c9a96e">📍 Trường ĐH Tôn Đức Thắng</strong><br><span style="color:#ddd;font-size:10.5px">19 Nguyễn Hữu Thọ, P. Tân Phong, Q.7</span>'`
+    });
+  </script>
+</body>
+</html>`;
+  }, [targetCoords.latitude, targetCoords.longitude, hostGps, mapType]);
 
   return (
     <>
@@ -699,9 +838,19 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
         <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" />
 
         <motion.div
+          drag="y"
+          dragListener={false}
+          dragControls={dragControls}
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0.05, bottom: 0.7 }}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 75 || info.velocity.y > 350) {
+              onClose();
+            }
+          }}
           initial={{ scale: 0.92, opacity: 0, y: 40 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.92, opacity: 0, y: 40 }}
+          exit={{ scale: 0.95, opacity: 0, y: "100%", transition: { duration: 0.25 } }}
           transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
           className="relative z-10 w-full max-w-[440px] sm:rounded-2xl rounded-t-2xl overflow-hidden flex flex-col"
           style={{
@@ -711,6 +860,14 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Mobile Drag-to-dismiss Handle Bar */}
+          <div
+            className="w-full pt-3 pb-1 flex justify-center items-center sm:hidden cursor-grab active:cursor-grabbing touch-none select-none"
+            onPointerDown={(e) => dragControls.start(e)}
+          >
+            <div className="w-12 h-1.5 rounded-full bg-white/30 hover:bg-white/50 active:bg-[#c9a96e] transition-colors" />
+          </div>
+
           {/* Offline banner */}
           {!isOnline && (
             <div className="px-4 py-1.5 bg-amber-500/15 border-b border-amber-500/30 flex items-center justify-between text-[11px] text-amber-300">
@@ -722,9 +879,13 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
           )}
 
           {/* ── HEADER ── */}
-          <div className="px-4 pt-4 pb-3 shrink-0">
-            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-3 sm:hidden" />
-
+          <div
+            onPointerDown={(e) => {
+              if ((e.target as HTMLElement).closest("button, a")) return;
+              dragControls.start(e);
+            }}
+            className="px-4 pt-1 sm:pt-4 pb-3 shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
+          >
             <div className="flex items-center gap-3">
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
@@ -781,7 +942,13 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
           <div className="h-px bg-gradient-to-r from-transparent via-[#c9a96e]/25 to-transparent mx-3" />
 
           {/* ── HOST GPS HERO CARD (Dành cho mạng yếu & copy tra cứu) ── */}
-          <div className="px-4 py-2.5 shrink-0 bg-black/25 border-b border-white/5">
+          <div
+            onPointerDown={(e) => {
+              if ((e.target as HTMLElement).closest("button, a")) return;
+              dragControls.start(e);
+            }}
+            className="px-4 py-2.5 shrink-0 bg-black/25 border-b border-white/5 cursor-grab active:cursor-grabbing touch-none select-none"
+          >
             {hostGps ? (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -856,7 +1023,12 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* ── STATUS MESSAGES SECTION (Tình hình kèm Ảnh Cloud) ── */}
-          <div className="flex-1 overflow-y-auto min-h-[110px] max-h-[175px] px-4 py-2.5 scroll-smooth" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(201,169,110,0.3) transparent" }}>
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="flex-1 overflow-y-auto min-h-[110px] max-h-[175px] px-4 py-2.5 scroll-smooth"
+            style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(201,169,110,0.3) transparent" }}
+          >
             {isLoading && messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-5">
                 <motion.div
@@ -978,34 +1150,40 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
             {/* Map Switcher: OpenStreetMap (Unlimited) vs Google Maps */}
             <div className="flex items-center rounded-lg bg-white/5 p-0.5 border border-white/10 text-[10px]">            
               <button
-                onClick={() => setMapType("google")}
+                onClick={() => {
+                  setMapLoaded(false);
+                  setMapType("google");
+                }}
                 className={`px-2 py-0.5 rounded font-medium transition-all ${
                   mapType === "google"
                     ? "bg-[#c9a96e] text-[#14100c] font-bold shadow"
                     : "text-white/60 hover:text-white"
                 }`}
-                title="Bản đồ Google Maps"
+                title="Bản đồ Google Maps (Zoom & Di chuyển tự do)"
               >
                 Google Maps
               </button>
               <button
-                onClick={() => setMapType("osm")}
+                onClick={() => {
+                  setMapLoaded(false);
+                  setMapType("osm");
+                }}
                 className={`px-2 py-0.5 rounded font-medium transition-all ${
                   mapType === "osm"
                     ? "bg-[#c9a96e] text-[#14100c] font-bold shadow"
                     : "text-white/60 hover:text-white"
                 }`}
-                title="OpenStreetMap - Không giới hạn thời gian"
+                title="OpenStreetMap - Không giới hạn"
               >
-                OSM (Mạng yếu)
+                OpenStreetMap
               </button>
             </div>
           </div>
 
           {/* ── MAP EMBED CONTAINER ── */}
-          <div className="relative shrink-0" style={{ height: "190px" }}>
+          <div className="relative shrink-0" style={{ height: "200px" }}>
             {!mapLoaded && isOnline && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[#1a1612]">
+              <div className="absolute inset-0 flex items-center justify-center bg-[#1a1612] z-[5]">
                 <div className="flex flex-col items-center gap-1.5">
                   <motion.div
                     animate={{ rotate: 360 }}
@@ -1018,7 +1196,7 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
             )}
 
             {!mapLoaded && !isOnline && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1612] p-4 text-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1612] p-4 text-center z-[5]">
                 <PinIcon className="w-6 h-6 mb-1 text-[#c9a96e]/70" />
                 <p className="text-[11px] text-white/50 leading-relaxed">
                   Mất kết nối mạng để tải hình bản đồ.<br />
@@ -1028,13 +1206,13 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
             )}
 
             <iframe
-              src={activeMapUrl}
+              key={`${mapType}-${targetCoords.latitude.toFixed(5)}-${targetCoords.longitude.toFixed(5)}`}
+              srcDoc={interactiveMapHtml}
               width="100%"
-              height="190"
+              height="200"
               style={{ border: 0 }}
               allowFullScreen
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
               title="Bản đồ theo dõi thực tại"
               onLoad={() => setMapLoaded(true)}
               className="w-full h-full"
@@ -1084,11 +1262,22 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
             className="fixed inset-0 z-[10000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
             onClick={() => setLightboxImg(null)}
           >
-            <div className="relative max-w-full max-h-full">
+            <motion.div
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.2, bottom: 0.7 }}
+              onDragEnd={(_, info) => {
+                if (Math.abs(info.offset.y) > 70 || Math.abs(info.velocity.y) > 300) {
+                  setLightboxImg(null);
+                }
+              }}
+              className="relative max-w-full max-h-full cursor-grab active:cursor-grabbing"
+              onClick={(e) => e.stopPropagation()}
+            >
               <img
                 src={lightboxImg}
                 alt="Ảnh phóng to"
-                className="max-h-[85vh] max-w-[90vw] object-contain rounded-xl shadow-2xl border border-white/20"
+                className="max-h-[85vh] max-w-[90vw] object-contain rounded-xl shadow-2xl border border-white/20 select-none pointer-events-none"
               />
               <button
                 onClick={() => setLightboxImg(null)}
@@ -1097,7 +1286,7 @@ function LiveLocationPopup({ onClose }: { onClose: () => void }) {
               >
                 <CloseIcon className="w-4 h-4" />
               </button>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1514,17 +1703,28 @@ export default function FloatingActionButton({
             onClick={() => setShowLockedModal(false)}
           >
             <motion.div
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.05, bottom: 0.65 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 60 || info.velocity.y > 350) {
+                  setShowLockedModal(false);
+                }
+              }}
               initial={{ scale: 0.9, opacity: 0, y: 25 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 25 }}
+              exit={{ scale: 0.9, opacity: 0, y: 80 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="relative w-full max-w-[350px] rounded-2xl p-5 border border-[#c9a96e]/35 text-center flex flex-col items-center gap-3.5 shadow-2xl"
+              className="relative w-full max-w-[350px] rounded-2xl p-5 border border-[#c9a96e]/35 text-center flex flex-col items-center gap-3.5 shadow-2xl cursor-grab active:cursor-grabbing touch-none select-none"
               style={{
                 background: "linear-gradient(155deg, #1e1813 0%, #2a2016 50%, #17130e 100%)",
                 boxShadow: "0 20px 50px rgba(0,0,0,0.6), 0 0 25px rgba(201,169,110,0.15)",
               }}
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Drag handle bar for mobile */}
+              <div className="w-10 h-1.5 rounded-full bg-white/25 mx-auto -mt-1 sm:hidden pointer-events-none" />
+
               {/* Lock SVG Icon */}
               <div className="w-12 h-12 rounded-2xl bg-[#c9a96e]/15 border border-[#c9a96e]/30 flex items-center justify-center text-[#f5deb3]">
                 <LockIcon className="w-5 h-5 text-[#f5deb3]" />
