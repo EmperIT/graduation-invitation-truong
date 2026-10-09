@@ -1,0 +1,342 @@
+@import "tailwindcss";
+
+:root {
+  /* Night-sky theme (used by the starry animated background) */
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+  --font-bubble: var(--font-bubble-cute);
+  --font-handwriting: var(--font-patrick-hand);
+  --font-dancing: var(--font-dancing-script);
+  --font-montserrat: var(--font-montserrat);
+}
+
+.font-dancing {
+  font-family: var(--font-dancing-script), cursive, sans-serif;
+}
+
+.font-montserrat {
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+.font-handwriting {
+  font-family: var(--font-patrick-hand), cursive, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.font-bubble {
+  font-family: var(--font-bubble-cute), "Comic Sans MS", "Trebuchet MS", ui-rounded, system-ui, cursive;
+}
+
+/* Make app root take full dynamic viewport height on modern browsers with a fallback */
+html, body, #__next {
+  height: 100%;
+}
+
+.app-full-height {
+  min-height: 100dvh; /* dynamic viewport height for mobile browsers */
+  min-height: 100vh;  /* fallback */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========================================================
+   RESPONSIVE BREAKPOINT: < 480px (MOBILE FULL) VS >= 480px (OLD DESKTOP LAYOUT)
+   - Dưới 480px: Thiệp chiếm full toàn bộ màn hình, các item phóng to lấp kín khoảng trống,
+     bố cục liền mạch như ảnh 2 (không bị khoảng dưới quá to),
+     băng Happy Graduation dính chặt vào mép trên ảnh trường.
+   - Từ 480px trở lên: Giữ nguyên 100% layout cũ.
+   ======================================================== */
+@media (max-width: 479px) {
+  .invitation-root-layout {
+    padding: 0 !important;
+  }
+  .invitation-card-layout {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    margin: 0 !important;
+    padding-top: max(0.5rem, env(safe-area-inset-top)) !important;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  .invitation-scaler {
+    width: 380px !important;
+    min-width: 380px !important;
+    max-width: none !important;
+    transform-origin: center center !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+@media (min-width: 480px) {
+  .invitation-card-layout {
+    max-width: 395px;
+    height: auto;
+    min-height: auto;
+  }
+  .invitation-scaler {
+    width: 100% !important;
+    max-width: 390px !important;
+    transform: none !important;
+  }
+}
+
+/* Patterned background: uses a background image plus two diagonal repeating gradients
+   to create tilted square frames (diamonds). A semi-opaque overlay darkens the image
+   so the pattern is subtle. Replace --bg-image via inline style to point to your image. */
+
+.patterned-bg {
+  /* tile width/height define rectangular cells */
+  --tile-w: 140px; /* column width */
+  --tile-h: 220px; /* row height (taller -> vertical rectangles) */
+  --line: 6px;     /* thickness of grid lines */
+  --overlay-alpha: 0.28; /* dark overlay alpha applied to each tile image */
+
+  /* Layers (top -> bottom): vertical grid lines, horizontal grid lines,
+     dark overlay (tiled), the tiled image */
+  background-image:
+    repeating-linear-gradient(90deg, white 0 var(--line), transparent var(--line) calc(var(--tile-w))),
+    repeating-linear-gradient(0deg, white 0 var(--line), transparent var(--line) calc(var(--tile-h))),
+    linear-gradient(rgba(0,0,0,var(--overlay-alpha)), rgba(0,0,0,var(--overlay-alpha))),
+    var(--bg-image, none);
+
+  /* Make the overlay and image repeat per tile so each cell contains the image with overlay applied */
+  background-size: auto, auto, var(--tile-w) var(--tile-h), var(--tile-w) var(--tile-h);
+  background-repeat: repeat, repeat, repeat, repeat;
+  background-position: 0 0, 0 0, center center, center center;
+}
+
+/* Make pattern subtler on small screens */
+@media (max-width: 640px) {
+  .patterned-bg { --tile-w: 100px; --tile-h: 160px; --line: 4px; }
+}
+
+/* Photo grid (centered, max-width 1280px). White grid lines are created by the
+   grid gap showing the wrapper background (white). Each tile uses the same
+   image (set via --tile-image) and has an overlay to darken the photo. */
+.photo-grid-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none; /* allow clicks through */
+}
+.photo-grid {
+  --line: 8px;            
+  --grid-padding: 16px;
+  --overlay-alpha: 0.22;  
+  --tile-image: var(--bg-image, none);
+
+  width: 100%;
+  /* Bóp nhỏ max-width từ 1280px xuống (ví dụ 700px) để lưới không bị bè ngang */
+  max-width: 700px;       
+  background: white;      
+  display: grid;
+  gap: var(--line);
+  padding: var(--grid-padding);
+  
+  /* Đổi từ 3 cột xuống 2 cột (hoặc 1 cột nếu muốn khung ảnh đơn) */
+  grid-template-columns: repeat(2, 1fr); 
+}
+.photo-tile {
+  position: relative;
+  background-image: var(--tile-image);
+  background-size: cover;
+  background-position: center;
+  aspect-ratio: 3 / 4; /* desktop default portrait 3:4 */
+  overflow: hidden;
+}
+
+/* Mobile override: make tiles taller (9:16) on narrow screens */
+@media (max-width: 640px) {
+  .photo-tile { aspect-ratio: 9 / 16; }
+}
+.photo-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,var(--overlay-alpha));
+}
+
+/* Responsive: on mobile (narrow) switch to 2x2 and hide extra tiles */
+@media (max-width: 640px) {
+  .photo-grid { grid-template-columns: repeat(2, 1fr); max-width: calc(100% - 32px); }
+  .photo-grid .photo-tile:nth-child(n+5) { display: none; }
+}
+
+/* Make sure main content sits above the grid */
+.content-above-grid { position: relative; z-index: 10; }
+
+.paper-invite-typewriter {
+  animation:
+    paper-invite-type 4.5s steps(45, end) infinite,
+    paper-invite-caret 0.75s step-end infinite;
+  border-right: 2px solid rgba(190, 18, 60, 0.85);
+  font-family: var(--font-bubble-cute), var(--font-cormorant), ui-rounded, system-ui, sans-serif;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-shadow: 0 2px 0 rgba(236, 72, 153, 0.45), 0 4px 10px rgba(0, 0, 0, 0.22);
+}
+
+.paper-invite-note {
+  font-family: var(--font-patrick-hand), var(--font-cormorant), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-style: normal;
+  letter-spacing: 0.015em;
+  color: #1f1f1f; /* Darker text color (almost charcoal/ink color) */
+  text-shadow: none; /* Removed the glowing pink shadows for clean handwriting look */
+  line-height: 1.35;
+}
+
+@keyframes banner-text-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.01); }
+}
+
+.banner-text-float {
+  animation: banner-text-float 3.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+.handwritten-dear {
+  font-family: var(--font-great-vibes), var(--font-cormorant), var(--font-bubble-cute), ui-serif, serif;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--color-foreground) 14%, black);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  font-size: 22px;
+}
+
+@media (min-width: 640px) {
+  .handwritten-dear { font-size: 28px; }
+}
+
+.handwritten-write {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0.16em 0.04em;
+  clip-path: inset(-0.28em 100% -0.28em 0);
+  animation: handwriting-reveal 1.65s ease-out both;
+  will-change: clip-path;
+}
+
+@keyframes handwriting-reveal {
+  to { clip-path: inset(-0.28em 0 -0.28em 0); }
+}
+
+@keyframes paper-invite-type {
+  0%,
+  12% {
+    max-width: 0;
+  }
+  72%,
+  100% {
+    max-width: 100%;
+  }
+}
+
+@keyframes paper-invite-caret {
+  0%,
+  100% {
+    border-color: rgba(190, 18, 60, 0.85);
+  }
+  50% {
+    border-color: transparent;
+  }
+}
+
+@keyframes map-wiggle {
+  0%, 100% { transform: rotate(0); }
+  10%, 30%, 50% { transform: rotate(12deg); }
+  20%, 40%, 60% { transform: rotate(-12deg); }
+  70% { transform: rotate(0); }
+}
+
+.animate-map-wiggle {
+  animation: map-wiggle 2s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+/* === SHIMMER TEXT EFFECT (Golden shimmer on graduation title) === */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer-gold {
+  background: linear-gradient(
+    90deg,
+    #967243 0%,
+    #c9a96e 20%,
+    #f5deb3 40%,
+    #c9a96e 60%,
+    #967243 80%,
+    #c9a96e 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+/* === CONFETTI FALL ANIMATION === */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-sway {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(30px); }
+  75% { transform: translateX(-30px); }
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confetti-fall var(--fall-duration, 3s) var(--fall-delay, 0s) ease-in forwards,
+             confetti-sway var(--sway-duration, 2s) ease-in-out infinite;
+}
