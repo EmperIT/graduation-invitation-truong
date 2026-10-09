@@ -49,6 +49,7 @@ let memoryStore: StatusData = {
   lockedMessage: 'Tính năng này sẽ được sử dụng vào ngày tốt nghiệp',
   messages: [],
 };
+let memoryInitialized = false;
 
 async function getStatusData(): Promise<StatusData> {
   const redis = getRedisClient();
@@ -70,27 +71,36 @@ async function getStatusData(): Promise<StatusData> {
     }
   }
 
-  // Thử đọc từ local file (khi chạy ở máy local)
+  // Nếu đang chạy và memoryStore đã được cập nhật bởi Host
+  if (memoryInitialized) {
+    return memoryStore;
+  }
+
+  // Thử đọc từ local file (lần đầu khởi chạy)
   try {
     const content = await fs.readFile(DATA_FILE, 'utf-8');
     const parsed = JSON.parse(content);
     
     if (Array.isArray(parsed)) {
       const hostMessages = parsed.filter((m: any) => m.id !== 1 && !m.isWelcome);
-      return {
+      memoryStore = {
         isUnlocked: false,
         lockedMessage: 'Tính năng này sẽ được sử dụng vào ngày tốt nghiệp',
         messages: hostMessages,
       };
+      memoryInitialized = true;
+      return memoryStore;
     }
 
-    return {
+    memoryStore = {
       isUnlocked: typeof parsed.isUnlocked === 'boolean' ? parsed.isUnlocked : false,
       lockedMessage: parsed.lockedMessage || 'Tính năng này sẽ được sử dụng vào ngày tốt nghiệp',
       messages: Array.isArray(parsed.messages)
         ? parsed.messages.filter((m: any) => m.id !== 1 && !m.isWelcome)
         : [],
     };
+    memoryInitialized = true;
+    return memoryStore;
   } catch {
     // Trên Vercel hoặc nếu không đọc được file, dùng memoryStore
     return memoryStore;
@@ -99,6 +109,7 @@ async function getStatusData(): Promise<StatusData> {
 
 async function saveStatusData(data: StatusData): Promise<void> {
   memoryStore = data;
+  memoryInitialized = true;
 
   const redis = getRedisClient();
   if (redis) {

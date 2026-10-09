@@ -1156,6 +1156,8 @@ export default function FloatingActionButton({
       }
     };
     fetchLockStatus();
+    const interval = setInterval(fetchLockStatus, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const toggleOpen = useCallback(() => {
@@ -1198,8 +1200,25 @@ export default function FloatingActionButton({
       label: "Xem thực tại",
       desc: "Xem vị trí GPS & cập nhật từ Host",
       icon: <LocationIcon />,
-      onClick: () => {
-        if (!isUnlocked) {
+      onClick: async () => {
+        let currentUnlocked = isUnlocked;
+        try {
+          const res = await fetch("/api/status", { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && typeof data.isUnlocked === "boolean") {
+              currentUnlocked = data.isUnlocked;
+              setIsUnlocked(data.isUnlocked);
+              if (data.lockedMessage) {
+                setLockedMessage(data.lockedMessage);
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+
+        if (!currentUnlocked) {
           setShowLockedModal(true);
           setIsOpen(false);
           return;
