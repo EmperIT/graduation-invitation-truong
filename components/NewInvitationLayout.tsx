@@ -44,7 +44,7 @@ export default function NewInvitationLayout({
   ceremonyTitle = "GRADUATION",
   dayOfWeek = "THỨ SÁU",
   date = "23.10.2026",
-  time = "9:00 - 10:30",
+  time = "10:00 - 12:00",
   venueName = "TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG",
   venueAddressLine1 = "19 đường Nguyễn Hữu Thọ, phường Tân Hưng, quận 7",
   footerNote = "Một thời điểm đánh dấu hành trình của mình về sự trưởng thành và phát triển nên mình mong rằng bạn sẽ đến chung vui với mình!",
@@ -93,8 +93,11 @@ export default function NewInvitationLayout({
         - Ẩn hoàn toàn trên màn hình mobile (hidden md:block) để thiệp làm trung tâm
       */}
       {/* 1. Sổ tay & bát kẹp giấy (Top-Left - Gọn gàng) */}
-      <div
-        className="hidden md:block absolute top-0 left-0 pointer-events-none select-none z-0"
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="hidden md:block absolute top-0 left-0 pointer-events-none select-none z-0 transform-gpu"
         style={{
           filter: "drop-shadow(6px 10px 10px rgba(50,35,25,0.30)) drop-shadow(16px 24px 28px rgba(60,45,35,0.18)) drop-shadow(28px 45px 50px rgba(70,55,45,0.10))",
         }}
@@ -104,11 +107,14 @@ export default function NewInvitationLayout({
           alt="Notebook and paperclips"
           className="w-[200px] lg:w-[240px] xl:w-[260px] h-auto object-contain"
         />
-      </div>
+      </motion.div>
 
       {/* 2. Bình hoa đỏ (Top-Right - To hơn cây bút, hoa nổi bật rõ rệt) */}
-      <div
-        className="hidden md:block absolute top-0 right-1 lg:right-4 xl:right-10 pointer-events-none select-none z-0"
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.25 }}
+        className="hidden md:block absolute top-0 right-1 lg:right-4 xl:right-10 pointer-events-none select-none z-0 transform-gpu"
         style={{
           filter: "drop-shadow(6px 10px 12px rgba(50,35,25,0.32)) drop-shadow(16px 24px 28px rgba(60,45,35,0.20)) drop-shadow(30px 48px 52px rgba(70,55,45,0.12))",
         }}
@@ -118,11 +124,14 @@ export default function NewInvitationLayout({
           alt="Flower vase"
           className="w-[230px] lg:w-[275px] xl:w-[290px] h-auto object-contain"
         />
-      </div>
+      </motion.div>
 
       {/* 3. Cây bút vàng (Bottom-Right - Thon nhỏ, thanh mảnh hơn bình hoa) */}
-      <div
-        className="hidden md:block absolute bottom-8 right-10 lg:bottom-10 lg:right-20 xl:right-30 pointer-events-none select-none z-0"
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+        className="hidden md:block absolute bottom-8 right-10 lg:bottom-10 lg:right-20 xl:right-30 pointer-events-none select-none z-0 transform-gpu"
         style={{
           filter: "drop-shadow(3px 5px 6px rgba(50,35,25,0.34)) drop-shadow(8px 12px 14px rgba(60,45,35,0.20)) drop-shadow(16px 22px 26px rgba(70,55,45,0.10))",
         }}
@@ -132,7 +141,7 @@ export default function NewInvitationLayout({
           alt="Golden pen"
           className="w-[125px] lg:w-[180px] xl:w-[195px] rotate-[75deg]"
         />
-      </div>
+      </motion.div>
 
       {/* 
         KHUNG THIỆP CHÍNH (CARD CONTAINER)
@@ -140,10 +149,10 @@ export default function NewInvitationLayout({
         - Khi từ 480px trở lên (>= 480px): Giữ nguyên 100% layout cũ (mockup trên bàn, đổ bóng bàn, bo góc, nghiêng nhẹ)
       */}
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.97, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="invitation-card-layout relative w-full max-w-[385px] sm:max-w-[395px] my-auto bg-[#faf8f5] rounded-[2px] shadow-[8px_16px_32px_rgba(40,25,15,0.24),18px_32px_55px_rgba(50,35,25,0.18),2px_4px_8px_rgba(30,18,10,0.25)] flex flex-col justify-between pt-4 pb-4 px-4 sm:pt-4 sm:pb-4 sm:px-4.5 shrink-0 bg-cover bg-center rotate-0 md:-rotate-[2deg] hover:md:-rotate-[0.5deg] transition-transform duration-300 ease-out overflow-hidden md:overflow-visible"
+        className="invitation-card-layout relative w-full max-w-[385px] sm:max-w-[395px] my-auto bg-[#faf8f5] rounded-[2px] shadow-[8px_16px_32px_rgba(40,25,15,0.24),18px_32px_55px_rgba(50,35,25,0.18),2px_4px_8px_rgba(30,18,10,0.25)] flex flex-col justify-between pt-4 pb-4 px-4 sm:pt-4 sm:pb-4 sm:px-4.5 shrink-0 bg-cover bg-center rotate-0 md:-rotate-[2deg] hover:md:-rotate-[0.5deg] transition-transform duration-300 ease-out overflow-hidden md:overflow-visible transform-gpu"
         style={{
           backgroundImage: "url('/background.png')",
         }}
@@ -170,7 +179,12 @@ export default function NewInvitationLayout({
           </div>
 
           {/* 1. Phần băng kraft trên cùng: "Happy GRADUATION" */}
-          <div className="relative flex justify-center items-start z-30 pt-0 sm:pt-0.5 shrink-0">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
+            className="relative flex justify-center items-start z-30 pt-0 sm:pt-0.5 shrink-0 transform-gpu"
+          >
             <div className="relative px-4.5 py-1.5 min-[480px]:px-3.5 sm:px-4.5 sm:py-1.5 flex flex-col items-start justify-center -rotate-[0.8deg] drop-shadow-[0_6px_16px_rgba(0,0,0,0.22)] min-w-[185px] min-[480px]:min-w-[165px] sm:min-w-[185px]">
               {/* Nền giấy rách piece_paper1.png */}
               <img
@@ -188,12 +202,17 @@ export default function NewInvitationLayout({
                 {ceremonyTitle}
               </span>
             </div>
-          </div>
+          </motion.div>
 
           {/* 2. Khung ảnh cử nhân & 2 mảnh giấy */}
           <div className="relative w-full h-[370px] min-[480px]:h-[340px] sm:h-[360px] mt-0 mb-0.5 flex items-center justify-center overflow-visible">
             {/* Lớp ảnh cử nhân */}
-            <div className="absolute inset-0 flex items-end justify-center pointer-events-none z-30 pb-0 -translate-y-2 min-[480px]:-translate-y-3 sm:-translate-y-5">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.22, duration: 0.45, ease: "easeOut" }}
+              className="absolute inset-0 flex items-end justify-center pointer-events-none z-30 pb-0 -translate-y-2 min-[480px]:-translate-y-3 sm:-translate-y-5 transform-gpu"
+            >
               {graduateImage && (
                 <img
                   src={graduateImage}
@@ -201,10 +220,15 @@ export default function NewInvitationLayout({
                   className="w-[260px] min-[480px]:w-[220px] sm:w-[240px] max-w-none object-contain filter drop-shadow-[0_8px_18px_rgba(0,0,0,0.22)] [mask-image:linear-gradient(to_bottom,black_45%,black_65%,rgba(0,0,0,0.6)_80%,rgba(0,0,0,0.15)_92%,transparent_100%)]"
                 />
               )}
-            </div>
+            </motion.div>
 
             {/* DẢI GIẤY KRAFT GIỚI THIỆU: "Xin chào, mình là..." */}
-            <div className="absolute top-9 min-[480px]:top-8 sm:top-9 -left-[18px] min-[480px]:left-0 sm:left-[-8px] z-20 px-4 py-2 min-[480px]:px-3.5 min-[480px]:py-1.5 sm:px-4 sm:py-2 -rotate-3 drop-shadow-[0_6px_16px_rgba(0,0,0,0.24)] flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, x: -14, rotate: -5 }}
+              animate={{ opacity: 1, x: 0, rotate: -3 }}
+              transition={{ delay: 0.3, duration: 0.4, ease: "easeOut" }}
+              className="absolute top-9 min-[480px]:top-8 sm:top-9 -left-[18px] min-[480px]:left-0 sm:left-[-8px] z-20 px-4 py-2 min-[480px]:px-3.5 min-[480px]:py-1.5 sm:px-4 sm:py-2 drop-shadow-[0_6px_16px_rgba(0,0,0,0.24)] flex items-center justify-center transform-gpu"
+            >
               {/* Background hình piece_paper2.png */}
               <img
                 src={paperStrip2}
@@ -214,20 +238,20 @@ export default function NewInvitationLayout({
 
               <div className="relative z-10 flex flex-col select-none px-1">
                 <span className="text-[12.5px] min-[480px]:text-[11px] sm:text-[12px] text-[#221b16] font-medium leading-tight">
-                  Xin chào, mình là
+                  Cử nhân
                 </span>
                 <span className="text-[16.5px] min-[480px]:text-[14px] sm:text-[16px] text-[#7d5125] font-dancing font-bold leading-tight">
                   {hostName}
                 </span>
               </div>
-            </div>
+            </motion.div>
 
             {/* MẢNH GIẤY THIỆP GỬI KHÁCH: "Thân mời [Tên khách]" */}
             <motion.div
-              initial={{ scale: 0.92, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.25, duration: 0.4 }}
-              className="absolute bottom-11 min-[480px]:bottom-11 sm:bottom-12 -right-[14px] min-[480px]:right-[-10px] sm:right-[-6px] z-30 w-[145px] min-[480px]:w-[130px] sm:w-[142px] h-[112px] min-[480px]:h-[102px] sm:h-[112px] rotate-2 flex flex-col items-center justify-center pt-2.5 pb-2 px-2.5 drop-shadow-[0_8px_22px_rgba(0,0,0,0.28)]"
+              initial={{ scale: 0.88, opacity: 0, rotate: 5 }}
+              animate={{ scale: 1, opacity: 1, rotate: 2 }}
+              transition={{ delay: 0.38, duration: 0.4, ease: "easeOut" }}
+              className="absolute bottom-11 min-[480px]:bottom-11 sm:bottom-12 -right-[14px] min-[480px]:right-[-10px] sm:right-[-6px] z-30 w-[145px] min-[480px]:w-[130px] sm:w-[142px] h-[112px] min-[480px]:h-[102px] sm:h-[112px] flex flex-col items-center justify-center pt-2.5 pb-2 px-2.5 drop-shadow-[0_8px_22px_rgba(0,0,0,0.28)] transform-gpu"
             >
               {/* Background hình invitation_board.png */}
               <img
@@ -239,7 +263,7 @@ export default function NewInvitationLayout({
               <span className="relative z-10 text-[#1a1a1a] text-[13px] min-[480px]:text-[12px] sm:text-[13px] font-bold tracking-wide select-none">
                 Thân mời
               </span>
-              <span className="relative z-10 text-[#7d5125] text-[22px] min-[480px]:text-[18px] sm:text-[22px] font-dancing font-bold leading-tight -mt-0.5 px-1 whitespace-nowrap">
+              <span className="relative z-10 text-[#7d5125] text-[20px] min-[480px]:text-[16px] sm:text-[20px] font-dancing font-bold leading-tight -mt-0.5 px-1 whitespace-nowrap">
                 {dearName}
               </span>
             </motion.div>
@@ -250,7 +274,12 @@ export default function NewInvitationLayout({
             3 & 4. CỤM THÔNG TIN & LỜI KẾT
             - Nằm liền kề ngay bên dưới ảnh cử nhân (chuẩn theo ảnh thiết kế)
             ------------------------------------------------------------- */}
-        <div className="relative w-full mt-2 min-[480px]:mt-0 pb-2 min-[480px]:pb-4 sm:pb-4 z-25 shrink-0">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, duration: 0.4, ease: "easeOut" }}
+          className="relative w-full mt-2 min-[480px]:mt-0 pb-2 min-[480px]:pb-4 sm:pb-4 z-25 shrink-0 transform-gpu"
+        >
           {/* Vùng sương khói mờ loang mềm mại (Soft Misty Fog Vignette - Không bị đóng thành khối hộp) */}
           <div className="absolute -inset-x-5 -top-10 pointer-events-none -z-10 overflow-hidden">
             {/* 1. Quầng sương trắng loang tròn mềm mại ở trung tâm cụm thông tin */}
@@ -302,7 +331,7 @@ export default function NewInvitationLayout({
               {footerNote}
             </p>
           </div>
-        </div>
+        </motion.div>
         </div>
       </motion.div>
     </div>

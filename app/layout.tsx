@@ -43,6 +43,15 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Thư mời dự lễ tốt nghiệp",
   description: "Trân trọng kính mời bạn đến dự lễ tốt nghiệp của mình",
+  icons: {
+    icon: [
+      { url: "/graduation-cap-icon.png", type: "image/png" },
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/graduation-cap-icon.png",
+    apple: "/graduation-cap-icon.png",
+  },
 };
 
 export default function RootLayout({
