@@ -46,8 +46,8 @@ export default function NewInvitationLayout({
   date = "23.10.2026",
   time = "9:00 - 10:30",
   venueName = "TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG",
-  venueAddressLine1 = "19 đường Nguyễn Hữu Thọ, quận 7",
-  footerNote = "Một thời điểm đánh dấu hành trình của mình về sự trưởng thành và phát triển. Sự hiện diện của bạn là niềm vinh hạnh của mình!",
+  venueAddressLine1 = "19 đường Nguyễn Hữu Thọ, phường Tân Hưng, quận 7",
+  footerNote = "Một thời điểm đánh dấu hành trình của mình về sự trưởng thành và phát triển nên mình mong rằng bạn sẽ đến chung vui với mình!",
   bgCampusImage = "/anhtdtu.png",
   graduateImage = "/anhtotnghiep.png",
   paperStrip1 = "/piece_paper1.png",
@@ -239,7 +239,7 @@ export default function NewInvitationLayout({
               <span className="relative z-10 text-[#1a1a1a] text-[13px] min-[480px]:text-[12px] sm:text-[13px] font-bold tracking-wide select-none">
                 Thân mời
               </span>
-              <span className="relative z-10 text-[#7d5125] text-[25px] min-[480px]:text-[21px] sm:text-[24px] font-dancing font-bold leading-tight -mt-0.5 px-1 whitespace-nowrap">
+              <span className="relative z-10 text-[#7d5125] text-[22px] min-[480px]:text-[18px] sm:text-[22px] font-dancing font-bold leading-tight -mt-0.5 px-1 whitespace-nowrap">
                 {dearName}
               </span>
             </motion.div>
