@@ -20,7 +20,7 @@
   { "id": "van-nguyen", "name": "Văn Nguyên" },
   { "id": "gia-hoang", "name": "Gia Hoàng" },
   { "id": "dung", "name": "Dũng" },
-  { "id": "Huy", "name": "Huy" },
+  { "id": "huy", "name": "Huy" },
   { "id": "minh-dang", "name": "Minh Đặng" },
   { "id": "hoang", "name": "Hoàng" },
   { "id": "anh-hieu", "name": "Anh Hiếu" },
@@ -30,5 +30,8 @@
   { "id": "anh-tan", "name": "Anh Tấn" },
   { "id": "anh-khai", "name": "Anh Khải" },
   { "id": "anh-thinh", "name": "Anh Thịnh" },
-  { "id": "anh-loc", "name": "Anh Lộc" }
+  { "id": "anh-loc", "name": "Anh Lộc" },
+  { "id": "thanh-dat", "name": "Thành Đạt" },
+  { "id": "tien-dat", "name": "Tiến Đạt" }
+
 ]
